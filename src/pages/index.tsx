@@ -45,7 +45,7 @@ const Home: NextPage = () => {
                 <UnorderedList fontSize="lg">
                   {repos.map(({ node: repo }) => (
                     <ListItem key={repo.id}>
-                      <Link textDecoration="underline" color="teal.700" href={repo.url} isExternal>
+                      <Link textDecoration="underline" color="teal.500" href={repo.url} isExternal>
                         {repo.name}
                       </Link>
                     </ListItem>
