@@ -12,10 +12,10 @@ export const authOptions: AuthOptions = {
   ],
   callbacks: {
     async session({ session, token: { accessToken, login } }) {
-      return { accessToken, login, ...session };
+      return Object.assign({ accessToken, login }, session);
     },
     async jwt({ token, user, account, profile }) {
-      return { login: (profile as GithubProfile)?.login, accessToken: account?.access_token, ...token };
+      return { login: (profile as GithubProfile | undefined)?.login, accessToken: account?.access_token, ...token };
     },
   },
 };
