@@ -8,13 +8,6 @@ const httpLink = new HttpLink({
   uri: "https://api.github.com/graphql",
 });
 
-declare module "next-auth" {
-  interface Session {
-    accessToken: string;
-    login: string;
-  }
-}
-
 export const ApolloProviderWrapper: React.FC<React.PropsWithChildren> = ({ children }) => {
   const { data: session } = useSession();
 

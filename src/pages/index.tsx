@@ -57,7 +57,9 @@ const Home: NextPage = () => {
               <Button onClick={() => signOut()}>Sign out</Button>
             </>
           ) : (
-            <Button onClick={() => signIn("github")}>Sign in with GitHub</Button>
+            <>
+              <Button onClick={() => signIn("github")}>Sign in with GitHub</Button>
+            </>
           )}
         </Stack>
       </Container>
