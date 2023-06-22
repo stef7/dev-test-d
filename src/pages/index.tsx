@@ -1,6 +1,6 @@
 import { useSession, signIn, signOut } from "next-auth/react";
 
-import { Button, Container, Stack, useColorMode } from "@chakra-ui/react";
+import { Button, Container, Heading, Stack, Text, useColorMode } from "@chakra-ui/react";
 
 import type { NextPage } from "next";
 import React from "react";
@@ -18,6 +18,8 @@ const Home: NextPage = () => {
           {session ? (
             <>
               <Button onClick={() => signOut()}>Sign out</Button>
+              <Heading>{session.user.name}</Heading>
+              {session.user.jobTitle && <Text>{session.user.jobTitle}</Text>}
               <UpdateUserFlow />
               <RepositoryList />
             </>
