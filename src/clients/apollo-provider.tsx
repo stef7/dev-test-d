@@ -12,22 +12,24 @@ export const ApolloProviderWrapper: React.FC<React.PropsWithChildren> = ({ child
   const { data: session } = useSession();
 
   const client = useMemo(() => {
-    const authMiddleware = setContext(async (_operation, { headers }) => {
-      if (!session?.accessToken) throw new GraphQLError("User is not authenticated");
+    // const authMiddleware = setContext(async (_operation, { headers }) => {
+    //   if (!session?.user?.username) throw new GraphQLError("User is not authenticated");
 
-      return {
-        headers: {
-          ...headers,
-          authorization: `Bearer ${session.accessToken}`,
-        },
-      };
-    });
+    //   return {
+    //     headers: {
+    //       ...headers,
+    //       authorization: `Bearer ${session.accessToken}`,
+    //     },
+    //   };
+    // });
 
     return new ApolloClient({
-      link: from([authMiddleware, httpLink]),
+      // link: from([authMiddleware, httpLink]),
+      link: from([httpLink]),
       cache: new InMemoryCache(),
     });
-  }, [session]);
+    // }, [session]);
+  }, []);
 
   return <ApolloProvider client={client}>{children}</ApolloProvider>;
 };

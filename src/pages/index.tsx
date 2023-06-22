@@ -1,10 +1,10 @@
 import { gql, useQuery } from "@apollo/client";
 
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signIn, signOut,  } from "next-auth/react";
 
 import { Button, Container, Heading, Link, Stack, UnorderedList, ListItem, Text } from "@chakra-ui/react";
 
-import { NextPage } from "next";
+import type { NextPage } from "next";
 import React from "react";
 
 const QUERY = gql`
@@ -58,7 +58,7 @@ const Home: NextPage = () => {
             </>
           ) : (
             <>
-              <Button onClick={() => signIn("github")}>Sign in with GitHub</Button>
+              <Button onClick={() => signIn("Username")}>Sign in with credentials</Button>
             </>
           )}
         </Stack>
