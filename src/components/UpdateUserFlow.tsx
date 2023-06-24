@@ -14,10 +14,12 @@ import {
   ModalCloseButton,
   FormErrorMessage,
   useDisclosure,
+  Heading,
+  Text,
 } from "@chakra-ui/react";
 
 import { useSession } from "next-auth/react";
-import React, { useCallback, useEffect, useId, useState } from "react";
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { SteppedForm, SteppedFormProps } from "./SteppedForm";
 
 type UserFormValues = { name: string; jobTitle: string };
@@ -62,10 +64,13 @@ const StepContainer: React.FC<React.PropsWithChildren> = ({ children }) => {
   );
 };
 
-export const UpdateUserFlow: React.FC = () => {
+let welcomeOpenedAlready = false;
+
+export const UpdateUserFlow: React.FC<{ welcomeIfNew?: boolean }> = ({ welcomeIfNew }) => {
   const { data: session, update } = useSession();
 
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const launcherRef = useRef<HTMLButtonElement>(null);
 
   const onNextOrSubmit = useCallback<SteppedFormProps["onNextOrSubmit"]>(
     async (isSubmitting, event) => {
@@ -81,21 +86,35 @@ export const UpdateUserFlow: React.FC = () => {
     [update, onClose],
   );
 
+  // if logged in, but no jobTitle set, this is a new user, so show modal as welcome screen
+  const [welcomeOpened, setWelcomeOpened] = useState(welcomeOpenedAlready);
+  const isNewUser = useMemo(() => session && !session.user.jobTitle, [session]);
+  useEffect(() => {
+    if (!welcomeIfNew || welcomeOpened || !isNewUser) return;
+    setWelcomeOpened(true);
+    onOpen();
+  }, [isNewUser, onOpen, welcomeIfNew, welcomeOpened]);
+
+  if (!session) return null;
+
   return (
     <Stack spacing={4}>
-      <Button colorScheme="teal" onClick={onOpen}>
-        Update user
+      <Heading>{session.user.name}</Heading>
+      {session.user.jobTitle && <Text>{session.user.jobTitle}</Text>}
+
+      <Button colorScheme="teal" onClick={onOpen} ref={launcherRef}>
+        Edit your details
       </Button>
 
-      <Modal {...{ isOpen, onClose }}>
+      <Modal isOpen={isOpen} onClose={onClose} finalFocusRef={launcherRef}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Update user</ModalHeader>
+          <ModalHeader>{isNewUser ? "Welcome! Please enter your details." : "Edit your details"}</ModalHeader>
           <ModalCloseButton />
 
-          <SteppedForm {...{ onNextOrSubmit, StepContainer }} ButtonsContainer={ModalFooter}>
+          <SteppedForm {...{ onNextOrSubmit, StepContainer, ButtonsContainer: ModalFooter }}>
             <FormTextField name="name" label="Username" value={session?.user.name} required />
-            <FormTextField name="jobTitle" label="Job title" value={session?.user.jobTitle} />
+            <FormTextField name="jobTitle" label="Job title" value={session?.user.jobTitle} required />
           </SteppedForm>
         </ModalContent>
       </Modal>
