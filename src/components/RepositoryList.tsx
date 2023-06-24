@@ -1,6 +1,6 @@
 import { gql, useQuery } from "@apollo/client";
 
-import { Heading, Link, UnorderedList, ListItem, Text, Stack } from "@chakra-ui/react";
+import { Heading, Link, UnorderedList, ListItem, Text, Stack, Spinner } from "@chakra-ui/react";
 
 const QUERY_REPOSITORIES = gql`
   query OwnedRepositories {
@@ -41,7 +41,18 @@ export const RepositoryList: React.FC = () => {
           ))}
         </UnorderedList>
       ) : (
-        <Text>{repos ? "You don't own any repositories." : error ? "Failed to load items." : "Loading..."}</Text>
+        <Text>
+          {repos ? (
+            "You don't own any repositories."
+          ) : error ? (
+            "Failed to load items."
+          ) : (
+            <>
+              <Spinner />
+              {" Loading..."}
+            </>
+          )}
+        </Text>
       )}
     </Stack>
   );
