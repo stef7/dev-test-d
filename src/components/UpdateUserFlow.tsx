@@ -1,6 +1,4 @@
-import { useForm } from "react-hook-form";
 import {
-  FormErrorMessage,
   FormLabel,
   FormControl,
   Input,
@@ -14,137 +12,91 @@ import {
   ModalFooter,
   ModalBody,
   ModalCloseButton,
+  FormErrorMessage,
+  useDisclosure,
 } from "@chakra-ui/react";
 
 import { useSession } from "next-auth/react";
-import React, { useCallback, useId, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useId, useState } from "react";
+import { SteppedForm, SteppedFormProps } from "./SteppedForm";
 
 type UserFormValues = { name: string; jobTitle: string };
-const useUserForm = () => useForm<UserFormValues>();
-type FormReturn = ReturnType<typeof useUserForm>;
 
 type FormTextFieldProps = {
-  formReturn: FormReturn;
   label: string;
   required?: boolean;
-  fieldName: keyof UserFormValues;
+  name: keyof UserFormValues;
 } & Pick<InputProps, "type" | "value">;
-const FormTextField: React.FC<FormTextFieldProps> = ({ formReturn, label, type, value, required, fieldName }) => {
+
+const FormTextField: React.FC<FormTextFieldProps> = ({ label, type, value: valueInitial, required, name }) => {
   const id = useId();
 
-  const {
-    register,
-    formState: { errors },
-  } = formReturn;
-
-  const fieldError = errors[fieldName];
+  const [value, setValue] = useState(valueInitial);
+  useEffect(() => setValue(valueInitial), [valueInitial]);
+  const [error, setError] = useState<string>();
 
   return (
-    <FormControl isInvalid={!!fieldError}>
+    <FormControl isInvalid={!!error}>
       <FormLabel htmlFor={id}>{label}</FormLabel>
       <Input
-        {...{ id, type, defaultValue: value }}
-        {...register(fieldName, {
-          required: required ? `${label} is required` : undefined,
-        })}
+        {...{ id, type, value, required, name }}
+        onInput={(ev) => {
+          setValue(ev.currentTarget.value);
+          if (error) setError(ev.currentTarget.validationMessage);
+        }}
+        onInvalid={(ev) => {
+          setError(ev.currentTarget.validationMessage);
+          ev.preventDefault();
+        }}
       />
-      <FormErrorMessage>{fieldError?.message}</FormErrorMessage>
+      <FormErrorMessage>{error}</FormErrorMessage>
     </FormControl>
+  );
+};
+
+const StepContainer: React.FC<React.PropsWithChildren> = ({ children }) => {
+  return (
+    <ModalBody>
+      <Stack spacing={6}>{children}</Stack>
+    </ModalBody>
   );
 };
 
 export const UpdateUserFlow: React.FC = () => {
   const { data: session, update } = useSession();
 
-  const formReturn = useUserForm();
-  const {
-    handleSubmit,
-    formState: { isSubmitting, errors },
-    reset,
-  } = formReturn;
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
-  const [step, setStep] = useState<number>();
-  const steps = useMemo(
-    () =>
-      session
-        ? [
-            () => (
-              <FormTextField {...{ formReturn }} fieldName="name" label="Username" value={session.user.name} required />
-            ),
-            () => (
-              <FormTextField {...{ formReturn }} fieldName="jobTitle" label="Job title" value={session.user.jobTitle} />
-            ),
-          ]
-        : [],
-    [formReturn, session],
-  );
-
-  const close = useCallback(() => setStep(undefined), []);
-  const next = useCallback(
-    () => setStep(!step ? 1 : step >= steps.length ? undefined : step + 1),
-    [step, steps.length],
-  );
-  const previous = useCallback(() => setStep(!step || step <= 1 ? undefined : step - 1), [step]);
-
-  const onValid = useCallback<Parameters<FormReturn["handleSubmit"]>[0]>(
-    async (values) => {
-      if (step !== steps.length) {
-        next();
-        return;
+  const onNextOrSubmit = useCallback<SteppedFormProps["onNextOrSubmit"]>(
+    async (isSubmitting, event) => {
+      if (isSubmitting) {
+        await fetch("/api/user", {
+          method: "POST",
+          body: new URLSearchParams([...new FormData(event.currentTarget)] as [string, string][]),
+        });
+        await update();
+        onClose();
       }
-
-      await fetch("/api/user", {
-        method: "POST",
-        body: JSON.stringify(values),
-      });
-      await update();
-      close();
     },
-    [update, close, next, step, steps.length],
+    [update, onClose],
   );
 
   return (
     <Stack spacing={4}>
-      <Button
-        colorScheme="teal"
-        onClick={() => {
-          reset();
-          next();
-        }}
-      >
+      <Button colorScheme="teal" onClick={onOpen}>
         Update user
       </Button>
-      <Modal isOpen={!!step} onClose={close}>
+
+      <Modal {...{ isOpen, onClose }}>
         <ModalOverlay />
         <ModalContent>
-          <form onSubmit={handleSubmit(onValid)}>
-            <ModalHeader>Update user</ModalHeader>
-            <ModalCloseButton />
-            <ModalBody>
-              <Stack spacing={4}>
-                {steps.map((stepRender, stepIndex0) => (
-                  <Stack
-                    key={`${stepRender} ${stepIndex0}`}
-                    spacing={4}
-                    display={step === stepIndex0 + 1 ? undefined : "none"}
-                  >
-                    {stepRender()}
-                  </Stack>
-                ))}
-                <FormErrorMessage>{errors.root?.message}</FormErrorMessage>
-              </Stack>
-            </ModalBody>
-            <ModalFooter>
-              {step !== 1 && (
-                <Button colorScheme="gray" type="button" onClick={previous} mr="auto" disabled={isSubmitting}>
-                  Back
-                </Button>
-              )}
-              <Button colorScheme="teal" isLoading={isSubmitting} type="submit">
-                {step === steps.length ? "Submit" : "Next"}
-              </Button>
-            </ModalFooter>
-          </form>
+          <ModalHeader>Update user</ModalHeader>
+          <ModalCloseButton />
+
+          <SteppedForm {...{ onNextOrSubmit, StepContainer }} ButtonsContainer={ModalFooter}>
+            <FormTextField name="name" label="Username" value={session?.user.name} required />
+            <FormTextField name="jobTitle" label="Job title" value={session?.user.jobTitle} />
+          </SteppedForm>
         </ModalContent>
       </Modal>
     </Stack>

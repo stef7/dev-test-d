@@ -19,7 +19,7 @@ const handler: NextApiHandler<UserResponseBody> = async (req, res) => {
   const session = await getServerSession(req, res, authOptions);
   if (!session?.user.id) return res.status(401).json({ error: "Unauthorised" });
 
-  const { name, jobTitle } = JSON.parse(req.body);
+  const { name, jobTitle } = req.body;
   if (typeof name !== "string") return res.status(422).json({ error: "Missing name" });
   if (typeof jobTitle !== "string") return res.status(422).json({ error: "Missing jobTitle" });
 
