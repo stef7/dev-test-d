@@ -25,7 +25,10 @@ export const authOptions: AuthOptions = {
   callbacks: {
     // refreshes token:
     async signIn({ account: accountPassed, user }) {
-      const account = accountPassed ? accountPassed : await prisma.account.findFirst({ where: { userId: user.id } });
+      const account =
+        accountPassed?.provider === "github"
+          ? accountPassed
+          : await prisma.account.findFirst({ where: { userId: user.id, provider: "github" } });
       if (!account) return true;
 
       const upserted = { userId: user.id, ...account };
@@ -44,7 +47,11 @@ export const authOptions: AuthOptions = {
     async session({ session, user: { id } }) {
       const userWithAccounts = await prisma.user.findUnique({
         where: { id },
-        select: { name: true, jobTitle: true, accounts: { select: { access_token: true } } },
+        select: {
+          name: true,
+          jobTitle: true,
+          accounts: { select: { access_token: true, provider: true } },
+        },
       });
       if (!userWithAccounts) return session;
 
@@ -54,7 +61,7 @@ export const authOptions: AuthOptions = {
         ...session,
         user: {
           id,
-          githubAccessToken: accounts?.at(-1)?.access_token,
+          githubAccessToken: accounts?.find((a) => a.provider === "github")?.access_token,
           ...user,
         },
       };
