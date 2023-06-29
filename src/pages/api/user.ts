@@ -15,15 +15,15 @@ export type UserResponseBody = User | { error: string };
  */
 const handler: NextApiHandler<UserResponseBody> = async (req, res) => {
   const session = await getServerSession(req, res, authOptions);
-  if (!session?.user.id) return res.status(401).json({ error: "Unauthorised" });
+  if (!session?.user?.id) return res.status(401).json({ error: "Unauthorised" });
 
   if (req.method !== "POST") return res.status(405).json({ error: "Method not supported" });
 
-  const { name, jobTitle } = req.body;
-  if (typeof name !== "string") return res.status(422).json({ error: "Missing name" });
+  const { username, jobTitle } = req.body;
+  if (typeof username !== "string") return res.status(422).json({ error: "Missing username" });
   if (typeof jobTitle !== "string") return res.status(422).json({ error: "Missing jobTitle" });
 
-  return res.json(await prisma.user.update({ where: { id: session.user.id }, data: { name, jobTitle } }));
+  return res.json(await prisma.user.update({ where: { id: session.user.id }, data: { username, jobTitle } }));
 };
 
 export default handler;

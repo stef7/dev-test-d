@@ -1,5 +1,5 @@
 import NextAuth, { type AuthOptions } from "next-auth";
-import GitHubProvider from "next-auth/providers/github";
+import GitHubProvider, { GithubProfile } from "next-auth/providers/github";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "~/clients/prisma-client";
 
@@ -8,61 +8,33 @@ const clientSecret = process.env["GITHUB_SECRET"];
 
 if (!clientId || !clientSecret) throw new Error("missing auth client credentials");
 
+const getUserAndAccounts = async (userId: string) =>
+  await prisma.user.findUnique({ where: { id: userId }, include: { accounts: true } });
+
 declare module "next-auth" {
   interface Session {
-    user: {
-      id: string;
-      githubAccessToken: string;
-      name: string;
-      jobTitle: string;
-    };
+    user: Awaited<ReturnType<typeof getUserAndAccounts>>;
   }
+  interface Profile extends GithubProfile {}
 }
 
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [GitHubProvider({ clientId, clientSecret })],
+  session: {
+    maxAge: 28800, // GitHub tokens expire in 8 hours
+  },
   callbacks: {
-    // refreshes token:
-    async signIn({ account: accountPassed, user }) {
-      const account =
-        accountPassed?.provider === "github"
-          ? accountPassed
-          : await prisma.account.findFirst({ where: { userId: user.id, provider: "github" } });
-      if (!account) return true;
-
-      const upserted = { userId: user.id, ...account };
-      await prisma.account.upsert({
-        where: {
-          provider_providerAccountId: {
-            provider: account.provider,
-            providerAccountId: account.providerAccountId,
-          },
-        },
-        create: upserted,
-        update: upserted,
-      });
+    async signIn({ account, profile }) {
+      if (profile && account) Object.assign(account, { login: profile.login }); // make login available in account
       return true;
     },
-    async session({ session, user: { id } }) {
-      const userWithAccounts = await prisma.user.findUnique({
-        where: { id },
-        select: {
-          name: true,
-          jobTitle: true,
-          accounts: { select: { access_token: true, provider: true } },
-        },
-      });
-      if (!userWithAccounts) return session;
-
-      const { accounts, ...user } = userWithAccounts;
-
+    async session({ session, user }) {
       return {
         ...session,
         user: {
-          id,
-          githubAccessToken: accounts?.find((a) => a.provider === "github")?.access_token,
           ...user,
+          ...(await getUserAndAccounts(user.id)),
         },
       };
     },

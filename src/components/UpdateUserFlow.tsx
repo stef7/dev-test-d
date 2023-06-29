@@ -22,19 +22,20 @@ import { useSession } from "next-auth/react";
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { SteppedForm, SteppedFormProps } from "./SteppedForm";
 
-type UserFormValues = { name: string; jobTitle: string };
+type UserFormValues = { username: string; jobTitle: string };
 
 type FormTextFieldProps = {
   label: string;
   required?: boolean;
   name: keyof UserFormValues;
-} & Pick<InputProps, "type" | "value">;
+  value: string | null;
+} & Pick<InputProps, "type">;
 
 const FormTextField: React.FC<FormTextFieldProps> = ({ label, type, value: valueInitial, required, name }) => {
   const id = useId();
 
-  const [value, setValue] = useState(valueInitial);
-  useEffect(() => setValue(valueInitial), [valueInitial]);
+  const [value, setValue] = useState(valueInitial ?? "");
+  useEffect(() => setValue(valueInitial ?? ""), [valueInitial]);
   const [error, setError] = useState<string>();
 
   return (
@@ -88,19 +89,21 @@ export const UpdateUserFlow: React.FC<{ welcomeIfNew?: boolean }> = ({ welcomeIf
 
   // if logged in, but no jobTitle set, this is a new user, so show modal as welcome screen
   const [welcomeOpened, setWelcomeOpened] = useState(welcomeOpenedAlready);
-  const isNewUser = useMemo(() => session && !session.user.jobTitle, [session]);
+  const isNewUser = useMemo(() => session?.user && !session.user.jobTitle, [session]);
   useEffect(() => {
     if (!welcomeIfNew || welcomeOpened || !isNewUser) return;
-    setWelcomeOpened(true);
+    setWelcomeOpened((welcomeOpenedAlready = true));
     onOpen();
   }, [isNewUser, onOpen, welcomeIfNew, welcomeOpened]);
 
-  if (!session) return null;
+  if (!session?.user) return null;
 
   return (
     <Stack spacing={4}>
-      <Heading>{session.user.name}</Heading>
-      {session.user.jobTitle && <Text>{session.user.jobTitle}</Text>}
+      <Heading>Hello, {session.user.name}!</Heading>
+      {(session.user.username || session.user.jobTitle) && (
+        <Text>{[session.user.username, session.user.jobTitle].filter(Boolean).join(", ")}</Text>
+      )}
 
       <Button colorScheme="teal" onClick={onOpen} ref={launcherRef}>
         Edit your details
@@ -113,8 +116,8 @@ export const UpdateUserFlow: React.FC<{ welcomeIfNew?: boolean }> = ({ welcomeIf
           <ModalCloseButton />
 
           <SteppedForm {...{ onNextOrSubmit, StepContainer, ButtonsContainer: ModalFooter }}>
-            <FormTextField name="name" label="Username" value={session?.user.name} required />
-            <FormTextField name="jobTitle" label="Job title" value={session?.user.jobTitle} required />
+            <FormTextField name="username" label="Username" value={session.user.username} required />
+            <FormTextField name="jobTitle" label="Job title" value={session.user.jobTitle} required />
           </SteppedForm>
         </ModalContent>
       </Modal>

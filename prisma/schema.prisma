@@ -24,6 +24,8 @@ model Account {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  login String? @unique
+
   @@unique([provider, providerAccountId])
 }
 
@@ -43,7 +45,11 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
-  jobTitle      String?
+
+  /// custom field
+  username String?
+  /// custom field
+  jobTitle String?
 }
 
 model VerificationToken {
